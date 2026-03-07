@@ -15,7 +15,7 @@ It does not calibrate BM scales from data (that requires a GLM pipeline and hist
 ## Installation
 
 ```bash
-pip install experience-rating
+uv add experience-rating
 ```
 
 Requires Python 3.10+. Dependencies: `polars`, `numpy`, `scipy`.
@@ -181,7 +181,7 @@ regulatory-facing choice.
 ## Tests
 
 ```bash
-pip install experience-rating[dev]
+uv add "experience-rating[dev]"
 pytest
 ```
 
