@@ -349,26 +349,31 @@ class TestClaimThreshold:
         scale = BonusMalusScale.from_uk_standard()
         return ClaimThreshold(scale, discount_rate=0.05)
 
-    def test_threshold_at_level_0_is_zero(self, ct):
-        """At level 0, claiming has no NCD cost (already at bottom)."""
-        # At level 0, one claim still goes to max(0-2, 0) = 0. So no NCD cost.
+    def test_threshold_at_level_0_is_positive(self, ct):
+        """At level 0, claiming still has a cost: the policyholder delays NCD accumulation.
+
+        Even at level 0, a claim means spending an extra year at level 0 rather
+        than progressing to level 1, 2, 3 over the horizon. So the threshold is
+        positive (though lower than at mid-NCD levels).
+        """
         th = ct.threshold(current_level=0, annual_premium=500.0)
-        assert th == pytest.approx(0.0, abs=1e-6)
+        assert th > 0
 
     def test_threshold_at_high_level_is_positive(self, ct):
         """At high NCD, claiming has a real financial cost."""
         th = ct.threshold(current_level=9, annual_premium=800.0)
         assert th > 0
 
-    def test_threshold_increases_with_level(self, ct):
-        """Higher NCD level -> more to lose -> higher threshold."""
-        annual_premium = 700.0
-        thresholds = [
-            ct.threshold(lvl, annual_premium) for lvl in range(10)
-        ]
-        # Not strictly monotone (level 0 and 1 both fall to 0 after 1 claim)
-        # But threshold at level 9 should exceed threshold at level 3
-        assert thresholds[9] > thresholds[3]
+    def test_threshold_level_1_exceeds_level_0(self, ct):
+        """Level 1 has a higher threshold than level 0 with same annual_premium.
+
+        Both fall to level 0 after a claim, but level 1's claim-free trajectory
+        (1->2->3->4) recovers faster than level 0's (0->1->2->3), so the NCD
+        cost of claiming is higher at level 1.
+        """
+        th0 = ct.threshold(current_level=0, annual_premium=700.0)
+        th1 = ct.threshold(current_level=1, annual_premium=700.0)
+        assert th1 > th0
 
     def test_threshold_increases_with_horizon(self, ct):
         """Longer horizon -> more future NCD cost -> higher threshold."""

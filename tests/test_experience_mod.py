@@ -100,7 +100,7 @@ class TestExperienceModFactor:
 
     def test_floor_applied(self, emod):
         mod = emod.predict(expected_losses=20_000, actual_losses=0, floor=0.5)
-        assert mod >= pytest.approx(0.5)
+        assert mod >= 0.5
 
     def test_zero_expected_raises(self, emod):
         with pytest.raises(ValueError, match="expected_losses must be positive"):
@@ -153,7 +153,7 @@ class TestExperienceModFactor:
             "actual_losses": [0.0],
         })
         result = emod.predict_batch(df, floor=0.5)
-        assert result["mod_factor"][0] >= pytest.approx(0.5)
+        assert result["mod_factor"][0] >= 0.5
 
     def test_sensitivity_returns_dataframe(self, emod):
         df = emod.sensitivity(expected_losses=20_000.0, n_points=20)
