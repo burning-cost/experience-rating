@@ -47,8 +47,8 @@ dev = [
 ]
 
 [project.urls]
-Repository = "https://github.com/burningcost/experience-rating"
-Issues = "https://github.com/burningcost/experience-rating/issues"
+Repository = "https://github.com/burning-cost/experience-rating"
+Issues = "https://github.com/burning-cost/experience-rating/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/experience_rating"]
