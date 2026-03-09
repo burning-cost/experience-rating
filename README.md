@@ -1,17 +1,32 @@
 # experience-rating
 [![Tests](https://github.com/burning-cost/experience-rating/actions/workflows/ci.yml/badge.svg)](https://github.com/burning-cost/experience-rating/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/experience-rating)](https://pypi.org/project/experience-rating/)
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
-NCD/bonus-malus systems, experience modification factors, and schedule rating for UK non-life insurance pricing.
+NCD/bonus-malus systems, experience modification factors, and schedule rating for UK non-life insurance pricing. For teams whose NCD logic lives in a spreadsheet no one fully understands.
+
+---
 
 ## The problem
 
-Every UK motor insurer runs an NCD system, but almost no one has a clean Python implementation that lets you ask: "what is the steady-state distribution of our book across NCD levels at 10% claim frequency?" or "at what claim amount should a 65% NCD customer absorb the loss rather than claim?". These questions come up in pricing, reserving, and customer communications — and they're currently answered with spreadsheets that break when a colleague changes a tab name.
+Every UK motor insurer runs an NCD system, but almost no one has a clean Python implementation that lets you ask: "what is the steady-state distribution of our book across NCD levels at 10% claim frequency?" or "at what claim amount should a 65% NCD customer absorb the loss rather than claim?". These questions come up in pricing, reserving, and customer communications - and they are currently answered with spreadsheets that break when a colleague changes a tab name.
 
-On the commercial side, experience modification factors require getting the credibility weight and ballast right. Too little ballast and a single large loss blows up the mod; too much and you've lost all experience rating signal. This library makes the parameter choices explicit and auditable.
+On the commercial side, experience modification factors require getting the credibility weight and ballast right. Too little ballast and a single large loss blows up the mod; too much and you have lost all experience rating signal. This library makes the parameter choices explicit and auditable.
+
+---
+
+## Blog post
+
+[Your NCD Threshold Advice Is Wrong at 65%](https://burning-cost.github.io/2026/03/07/experience-rating-ncd-bonus-malus/)
+
+---
 
 ## What this library does not do
 
-It does not calibrate BM scales from data (that requires a GLM pipeline and historical claims). It does not model policyholder heterogeneity (see the `credibility` library for that). It does not optimise NCD system design — it analyses a system you've already specified.
+It does not calibrate BM scales from data (that requires a GLM pipeline and historical claims). It does not model policyholder heterogeneity (see the `credibility` library for that). It does not optimise NCD system design - it analyses a system you have already specified.
+
+---
 
 ## Installation
 
@@ -20,6 +35,8 @@ uv add experience-rating
 ```
 
 Requires Python 3.10+. Dependencies: `polars`, `numpy`, `scipy`.
+
+---
 
 ## Quick start
 
@@ -95,13 +112,15 @@ factor = sr.rate({"Premises": 0.05, "Management": -0.03, "Risk_Controls": 0.02})
 print(f"Schedule rating factor: {factor:.4f}")  # 1.0400
 ```
 
+---
+
 ## API reference
 
 ### `BonusMalusScale`
 
 | Method | Description |
 |--------|-------------|
-| `from_uk_standard()` | ABI-style 10-level NCD scale (0%–65%) |
+| `from_uk_standard()` | ABI-style 10-level NCD scale (0%-65%) |
 | `from_dict(spec)` | Build from a dictionary specification |
 | `transition_matrix(claim_frequency)` | Row-stochastic transition matrix (Poisson claims) |
 | `summary()` | Polars DataFrame of level definitions |
@@ -141,6 +160,8 @@ print(f"Schedule rating factor: {factor:.4f}")  # 1.0400
 | `rate_batch(df)` | Schedule factors for a portfolio DataFrame |
 | `summary()` | Registered factors as a Polars DataFrame |
 
+---
+
 ## Custom BM scale
 
 ```python
@@ -163,21 +184,17 @@ spec = {
 scale = BonusMalusScale.from_dict(spec)
 ```
 
+---
+
 ## Design notes
 
-**Why eigenvector for stationary distribution?** It is exact (no simulation noise) and
-fast. The simulation method exists as a sanity check — if the two disagree by more than
-a few percent, the transition matrix is probably not ergodic.
+**Why eigenvector for stationary distribution?** It is exact (no simulation noise) and fast. The simulation method exists as a sanity check - if the two disagree by more than a few percent, the transition matrix is probably not ergodic.
 
-**Why additive schedule rating (not multiplicative)?** UK commercial practice is
-additive: factors are debits/credits expressed as percentage adjustments summed together.
-The aggregate cap is where you control total swing. Multiplicative schedule rating is used
-in some US lines but is not standard in UK admitted business.
+**Why additive schedule rating (not multiplicative)?** UK commercial practice is additive: factors are debits/credits expressed as percentage adjustments summed together. The aggregate cap is where you control total swing. Multiplicative schedule rating is used in some US lines but is not standard in UK admitted business.
 
-**Why expose `ballast` directly rather than deriving it?** Because the choice of
-ballast is a deliberate actuarial decision that affects which risks get charged more
-and which get discounted. Hiding it inside a calibration function obscures a
-regulatory-facing choice.
+**Why expose `ballast` directly rather than deriving it?** Because the choice of ballast is a deliberate actuarial decision that affects which risks get charged more and which get discounted. Hiding it inside a calibration function obscures a regulatory-facing choice.
+
+---
 
 ## Tests
 
@@ -186,9 +203,39 @@ uv add "experience-rating[dev]"
 pytest
 ```
 
-52 tests covering scale construction, transition matrix properties, stationary
-distribution (analytical vs simulation agreement), claiming thresholds, experience
-modification formula, and schedule rating bounds validation.
+52 tests covering scale construction, transition matrix properties, stationary distribution (analytical vs simulation agreement), claiming thresholds, experience modification formula, and schedule rating bounds validation.
+
+---
+
+## Related Burning Cost libraries
+
+- **[credibility](https://github.com/burning-cost/credibility)** - Bühlmann-Straub credibility weighting for scheme and affinity pricing. The experience mod factor here uses a simple credibility weight; `credibility` gives you the full structural parameter estimation (EPV, VHM, k) when you have panel data across multiple groups.
+- **[insurance-multilevel](https://github.com/burning-cost/insurance-multilevel)** - Two-stage CatBoost + REML approach when individual risk factors and group factors need to be modelled jointly.
+
+**Model building**
+
+| Library | Description |
+|---------|-------------|
+| [shap-relativities](https://github.com/burning-cost/shap-relativities) | Extract rating relativities from GBMs using SHAP |
+| [insurance-cv](https://github.com/burning-cost/insurance-cv) | Walk-forward cross-validation respecting IBNR structure |
+
+**Uncertainty quantification**
+
+| Library | Description |
+|---------|-------------|
+| [insurance-conformal](https://github.com/burning-cost/insurance-conformal) | Distribution-free prediction intervals for Tweedie models |
+| [bayesian-pricing](https://github.com/burning-cost/bayesian-pricing) | Hierarchical Bayesian models for thin-data segments |
+
+**Deployment and optimisation**
+
+| Library | Description |
+|---------|-------------|
+| [rate-optimiser](https://github.com/burning-cost/rate-optimiser) | Constrained rate change optimisation with FCA PS21/5 compliance |
+| [insurance-demand](https://github.com/burning-cost/insurance-demand) | Conversion, retention, and price elasticity modelling |
+
+[All libraries](https://burning-cost.github.io)
+
+---
 
 ## Licence
 
