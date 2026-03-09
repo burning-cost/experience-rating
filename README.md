@@ -1,4 +1,5 @@
 # experience-rating
+[![Tests](https://github.com/burning-cost/experience-rating/actions/workflows/ci.yml/badge.svg)](https://github.com/burning-cost/experience-rating/actions/workflows/ci.yml)
 
 NCD/bonus-malus systems, experience modification factors, and schedule rating for UK non-life insurance pricing.
 
