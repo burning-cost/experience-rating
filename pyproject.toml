@@ -36,7 +36,7 @@ classifiers = [
 requires-python = ">=3.10"
 dependencies = [
     "numpy>=1.21",
-    "polars>=0.20",
+    "polars>=1.0",
     "scipy>=1.9",
 ]
 
@@ -59,3 +59,8 @@ addopts = "-v"
 
 [tool.coverage.run]
 source = ["src/experience_rating"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]
