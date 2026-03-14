@@ -235,7 +235,7 @@ Run `notebooks/benchmark.py` on Databricks to reproduce.
 
 ## Related Burning Cost libraries
 
-- **[credibility](https://github.com/burning-cost/credibility)** - Bühlmann-Straub credibility weighting for scheme and affinity pricing. The experience mod factor here uses a simple credibility weight; `credibility` gives you the full structural parameter estimation (EPV, VHM, k) when you have panel data across multiple groups.
+- **[insurance-credibility](https://github.com/burning-cost/insurance-credibility)** - Bühlmann-Straub credibility weighting for scheme and affinity pricing. The experience mod factor here uses a simple credibility weight; `insurance-credibility` gives you the full structural parameter estimation (EPV, VHM, k) when you have panel data across multiple groups.
 - **[insurance-multilevel](https://github.com/burning-cost/insurance-multilevel)** - Two-stage CatBoost + REML approach when individual risk factors and group factors need to be modelled jointly.
 
 **Model building**
@@ -256,7 +256,7 @@ Run `notebooks/benchmark.py` on Databricks to reproduce.
 
 | Library | Description |
 |---------|-------------|
-| [rate-optimiser](https://github.com/burning-cost/rate-optimiser) | Constrained rate change optimisation with FCA PS21/5 compliance |
+| [insurance-optimise](https://github.com/burning-cost/insurance-optimise) | Constrained rate change optimisation with FCA PS21/5 compliance |
 | [insurance-demand](https://github.com/burning-cost/insurance-demand) | Conversion, retention, and price elasticity modelling |
 
 [All libraries](https://burning-cost.github.io)
