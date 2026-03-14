@@ -233,6 +233,11 @@ Run `notebooks/benchmark.py` on Databricks to reproduce.
 
 ---
 
+
+## Databricks Notebook
+
+A ready-to-run Databricks notebook benchmarking this library against standard approaches is available in [burning-cost-examples](https://github.com/burning-cost/burning-cost-examples/blob/main/notebooks/experience_rating_demo.py).
+
 ## Related Burning Cost libraries
 
 - **[insurance-credibility](https://github.com/burning-cost/insurance-credibility)** - Bühlmann-Straub credibility weighting for scheme and affinity pricing. The experience mod factor here uses a simple credibility weight; `insurance-credibility` gives you the full structural parameter estimation (EPV, VHM, k) when you have panel data across multiple groups.
