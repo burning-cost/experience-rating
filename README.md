@@ -263,6 +263,14 @@ Run `notebooks/benchmark.py` on Databricks to reproduce.
 
 ---
 
+
+## Related Libraries
+
+| Library | What it does |
+|---------|-------------|
+| [insurance-credibility](https://github.com/burning-cost/insurance-credibility) | Bühlmann-Straub group credibility and Bayesian experience rating at policy level |
+| [insurance-multilevel](https://github.com/burning-cost/insurance-multilevel) | Two-stage CatBoost + REML random effects — applies the same credibility logic to broker and scheme factors |
+
 ## Licence
 
 MIT
