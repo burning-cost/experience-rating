@@ -353,3 +353,34 @@ class TestScheduleRating:
         r = repr(sr)
         assert "ScheduleRating" in r
         assert "n_factors=2" in r
+
+
+# ---------------------------------------------------------------------------
+# P2-1: Negative actual_losses validation
+# ---------------------------------------------------------------------------
+
+
+class TestExperienceModFactorValidation:
+    @pytest.fixture
+    def emod(self):
+        params = CredibilityParams(credibility_weight=0.70, ballast=5000.0)
+        return ExperienceModFactor(params)
+
+    def test_negative_actual_losses_raises(self, emod):
+        """Negative actual_losses must raise ValueError."""
+        with pytest.raises(ValueError, match="actual_losses must be non-negative"):
+            emod.predict(expected_losses=20_000, actual_losses=-100)
+
+    def test_negative_actual_losses_batch_raises(self, emod):
+        """Negative actual_losses in batch must raise ValueError."""
+        df = pl.DataFrame({
+            "expected_losses": [20_000.0, 10_000.0],
+            "actual_losses": [15_000.0, -500.0],
+        })
+        with pytest.raises(ValueError, match="actual_losses values must be non-negative"):
+            emod.predict_batch(df)
+
+    def test_zero_actual_losses_allowed(self, emod):
+        """Zero actual_losses is valid (no claims period)."""
+        mod = emod.predict(expected_losses=20_000, actual_losses=0.0)
+        assert mod < 1.0

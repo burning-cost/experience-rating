@@ -376,6 +376,10 @@ class BonusMalusSimulator:
             claim_frequency: Expected claims per policyholder per year.
             rng_seed: Random seed for reproducibility.
         """
+        if claim_frequency < 0:
+            raise ValueError(
+                f"claim_frequency must be non-negative, got {claim_frequency}."
+            )
         self.scale = scale
         self.claim_frequency = claim_frequency
         self._rng = np.random.default_rng(rng_seed)
@@ -724,6 +728,10 @@ class ClaimThreshold:
                 f"current_level {current_level} out of range "
                 f"[0, {len(self.scale)-1}]."
             )
+        if years_horizon <= 0:
+            raise ValueError(
+                f"years_horizon must be a positive integer, got {years_horizon}."
+            )
         return self._ncd_cost(current_level, claim_count, annual_premium, years_horizon)
 
     def threshold_curve(
@@ -788,9 +796,9 @@ class ClaimThreshold:
         """Compute claiming thresholds for every level in the scale.
 
         Args:
-            annual_premium: Premium at each level (treated as level-specific
-                premium the policyholder pays at that level, using that level's
-                premium_factor relative to base).
+            annual_premium: Base annual premium before any NCD/BM discount (£).
+                Internally multiplied by each level's premium_factor to derive
+                the level-specific premium used in the threshold calculation.
             years_horizon: Number of future years to consider.
 
         Returns:

@@ -131,7 +131,8 @@ class ExperienceModFactor:
             full_credibility_exposure: Exposure at which A = 1.0.
             ballast: Ballast B in the mod formula.
             credibility_formula: "square_root" (classic Mowbray formula,
-                A = sqrt(e / e_full)) or "linear" (A = e / e_full, capped at 1).
+                A = sqrt(min(e / e_full, 1.0)), capped at 1.0) or "linear"
+                (A = min(e / e_full, 1.0), capped at 1.0).
 
         Returns:
             ExperienceModFactor: Configured with derived credibility weight.
@@ -172,6 +173,10 @@ class ExperienceModFactor:
         if expected_losses <= 0:
             raise ValueError(
                 f"expected_losses must be positive, got {expected_losses}."
+            )
+        if actual_losses < 0:
+            raise ValueError(
+                f"actual_losses must be non-negative, got {actual_losses}."
             )
 
         A = self.params.credibility_weight
@@ -216,6 +221,9 @@ class ExperienceModFactor:
 
         if (df[expected_col] <= 0).any():
             raise ValueError("All expected_losses values must be positive.")
+
+        if (df[actual_col] < 0).any():
+            raise ValueError("All actual_losses values must be non-negative.")
 
         A = self.params.credibility_weight
         B = self.params.ballast
@@ -313,8 +321,9 @@ class ScheduleRating:
     """Schedule rating system with validated debit/credit factors.
 
     Schedule rating allows underwriters to apply judgemental adjustments within
-    pre-approved bounds. The total adjustment is the product of all (1 + factor)
-    terms, capped at the schedule maximum.
+    pre-approved bounds. The total adjustment is the sum of all debit/credit
+    factors (additive convention), capped at the schedule maximum. The final
+    factor returned is 1.0 + total_adjustment.
 
     In the UK commercial market, schedule rating is more common in liability,
     property, and professional indemnity than in personal lines. The bounds are

@@ -3,8 +3,9 @@ experience-rating: NCD/bonus-malus systems, experience modification factors,
 and schedule rating for UK non-life insurance pricing.
 
 Modules:
-    bonus_malus: BonusMalusScale, BonusMalusSimulator, ClaimThreshold
-    experience_mod: ExperienceModFactor, ScheduleRating
+    bonus_malus: BonusMalusLevel, BonusMalusScale, BonusMalusSimulator,
+                 ClaimThreshold, TransitionRules
+    experience_mod: CredibilityParams, ExperienceModFactor, ScheduleRating
 """
 
 from experience_rating.bonus_malus import (
@@ -12,8 +13,10 @@ from experience_rating.bonus_malus import (
     BonusMalusScale,
     BonusMalusSimulator,
     ClaimThreshold,
+    TransitionRules,
 )
 from experience_rating.experience_mod import (
+    CredibilityParams,
     ExperienceModFactor,
     ScheduleRating,
 )
@@ -23,8 +26,10 @@ __all__ = [
     "BonusMalusScale",
     "BonusMalusSimulator",
     "ClaimThreshold",
+    "CredibilityParams",
     "ExperienceModFactor",
     "ScheduleRating",
+    "TransitionRules",
 ]
 
-__version__ = "0.1.0"
+__version__ = "0.1.2"

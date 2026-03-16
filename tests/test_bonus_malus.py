@@ -420,3 +420,54 @@ class TestClaimThreshold:
         th_low = ct.threshold(current_level=8, annual_premium=400.0)
         th_high = ct.threshold(current_level=8, annual_premium=1200.0)
         assert th_high > th_low
+
+
+# ---------------------------------------------------------------------------
+# P2-4: years_horizon validation
+# ---------------------------------------------------------------------------
+
+
+class TestClaimThresholdValidation:
+    @pytest.fixture
+    def ct(self):
+        scale = BonusMalusScale.from_uk_standard()
+        return ClaimThreshold(scale, discount_rate=0.05)
+
+    def test_years_horizon_zero_raises(self, ct):
+        """years_horizon=0 must raise rather than silently return 0."""
+        with pytest.raises(ValueError, match="years_horizon must be a positive integer"):
+            ct.threshold(current_level=5, annual_premium=800.0, years_horizon=0)
+
+    def test_years_horizon_negative_raises(self, ct):
+        with pytest.raises(ValueError, match="years_horizon must be a positive integer"):
+            ct.threshold(current_level=5, annual_premium=800.0, years_horizon=-1)
+
+
+# ---------------------------------------------------------------------------
+# P2-5: BonusMalusSimulator claim_frequency validation
+# ---------------------------------------------------------------------------
+
+
+class TestBonusMalusSimulatorValidation:
+    def test_negative_claim_frequency_raises(self):
+        """Negative claim frequency must raise at construction time."""
+        scale = BonusMalusScale.from_uk_standard()
+        with pytest.raises(ValueError, match="claim_frequency must be non-negative"):
+            BonusMalusSimulator(scale, claim_frequency=-0.5)
+
+
+# ---------------------------------------------------------------------------
+# P2-6: Markov invariant: pi @ T = pi
+# ---------------------------------------------------------------------------
+
+
+class TestMarkovInvariant:
+    def test_stationary_distribution_satisfies_pi_T_equals_pi(self):
+        """The analytical stationary distribution must satisfy pi @ T = pi."""
+        scale = BonusMalusScale.from_uk_standard()
+        sim = BonusMalusSimulator(scale, claim_frequency=0.10)
+        dist = sim.stationary_distribution(method="analytical")
+        pi = dist.sort("level")["stationary_prob"].to_numpy()
+        T = sim.transition_matrix
+        pi_next = pi @ T
+        np.testing.assert_allclose(pi_next, pi, atol=1e-8)
