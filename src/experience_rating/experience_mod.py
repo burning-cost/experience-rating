@@ -58,9 +58,11 @@ class CredibilityParams:
     Attributes:
         credibility_weight: A in the formula. Typically derived from exposure
             relative to a full-credibility threshold.
-        ballast: B in the formula. Set to limit the swing from a single large
-            loss. Common approach: B = expected_losses * (1 - A) / A for some
-            target credibility.
+        ballast: B in the formula. Controls the sensitivity of the mod to a
+            risk's own experience. The sensitivity is A * E / (E + B), where E
+            is expected losses. For A=0.65 and B=8,000: a fleet with E=£8k has
+            sensitivity 32.5%; at E=£80k sensitivity is ~59%. Larger fleets get
+            more weight on their own experience automatically.
     """
 
     credibility_weight: float

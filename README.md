@@ -53,8 +53,10 @@ import polars as pl
 from experience_rating import ExperienceModFactor
 from experience_rating.experience_mod import CredibilityParams
 
-# Ballast of £8,000 means a fleet with £8k expected losses gets 50% credibility.
-# At £80k expected losses you are at ~91% credibility — effectively fully experience-rated.
+# With A=0.65 and B=£8,000, a fleet with £8k expected losses has 32.5% sensitivity
+# to its own experience (A * E/(E+B) = 0.65 * 8k/16k). At £80k expected losses
+# sensitivity rises to ~59% — the ballast-to-expected ratio drives how much own
+# experience matters; larger fleets are more heavily experience-rated.
 params = CredibilityParams(credibility_weight=0.65, ballast=8_000.0)
 emod = ExperienceModFactor(params)
 
@@ -68,7 +70,7 @@ result = emod.predict_batch(fleet_accounts, cap=2.0, floor=0.5)
 print(result)
 # Alpha: slightly above 1.0 (worse than expected, moderate size)
 # Beta: below 1.0 (better than expected, high credibility)
-# Gamma: well below 1.0 (much better than expected, low credibility damps it)
+# Gamma: well below 1.0 (much better than expected, small fleet — high ballast-to-expected ratio damps the result)
 ```
 
 ### Schedule rating for commercial risks
@@ -94,7 +96,7 @@ NCD is the secondary use case — for personal lines teams who need to model the
 ```python
 from experience_rating import BonusMalusScale, BonusMalusSimulator
 
-# ABI-style UK motor NCD: levels 0%-65%, step up on claim-free year,
+# Commonly used UK NCD scale: levels 0%-65%, step up on claim-free year,
 # back two on one claim, back to zero on two or more claims.
 scale = BonusMalusScale.from_uk_standard()
 
@@ -137,7 +139,7 @@ print("Claiming is rational" if should else "Better to pay out of pocket")
 |--------|-------------|
 | `from_exposure(actual, full_credibility, ballast, formula)` | Construct from exposure-based credibility |
 | `predict(expected_losses, actual_losses, cap, floor)` | Single-risk mod factor |
-| `predict_batch(df, cap, floor)` | Portfolio mod factors (Polars DataFrame) |
+| `predict_batch(df, expected_col, actual_col, cap, floor)` | Portfolio mod factors (Polars DataFrame) |
 | `sensitivity(expected_losses, actual_range, n_points)` | Mod vs actual loss curve |
 
 ### `ScheduleRating`
@@ -153,7 +155,7 @@ print("Claiming is rational" if should else "Better to pay out of pocket")
 
 | Method | Description |
 |--------|-------------|
-| `from_uk_standard()` | ABI-style 10-level NCD scale (0%-65%) |
+| `from_uk_standard()` | Commonly used UK NCD scale: 10 levels (0%-65%) |
 | `from_dict(spec)` | Build from a dictionary specification |
 | `transition_matrix(claim_frequency)` | Row-stochastic transition matrix (Poisson claims) |
 | `summary()` | Polars DataFrame of level definitions |
@@ -218,7 +220,7 @@ uv add "experience-rating[dev]"
 pytest
 ```
 
-52 tests covering scale construction, transition matrix properties, stationary distribution (analytical vs simulation agreement), claiming thresholds, experience modification formula, and schedule rating bounds validation.
+105 tests covering scale construction, transition matrix properties, stationary distribution (analytical vs simulation agreement), claiming thresholds, experience modification formula, and schedule rating bounds validation.
 
 ---
 
@@ -230,7 +232,7 @@ The benchmark tests two components independently:
 
 **Experience modification factor:** Credibility-weighted mod formula applied to 4 years of aggregate loss experience per policyholder, with cap=2.0 and floor=0.50.
 
-**NCD / bonus-malus system:** 10,000 policyholders simulated through the ABI-standard UK motor NCD scale over 4 history years. The NCD level at year 5 is used as a premium predictor. This is a deliberately conservative test — the NCD level is a lossy encoding of history (level only, not raw claim counts), so some discrimination signal is discarded.
+**NCD / bonus-malus system:** 10,000 policyholders simulated through the commonly used UK motor NCD scale over 4 history years. The NCD level at year 5 is used as a premium predictor. This is a deliberately conservative test — the NCD level is a lossy encoding of history (level only, not raw claim counts), so some discrimination signal is discarded.
 
 | Method | Gini vs holdout claims | MSE vs DGP true frequency | Notes |
 |---|---|---|---|
