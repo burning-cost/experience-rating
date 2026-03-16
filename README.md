@@ -4,15 +4,19 @@
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
-NCD/bonus-malus systems, experience modification factors, and schedule rating for UK non-life insurance pricing. For teams whose NCD logic lives in a spreadsheet no one fully understands.
+Experience modification factors, schedule rating, and NCD/bonus-malus systems for UK non-life insurance pricing. For teams whose experience rating logic lives in a spreadsheet no one fully understands.
 
 ---
 
 ## The problem
 
-Every UK motor insurer runs an NCD system, but almost no one has a clean Python implementation that lets you ask: "what is the steady-state distribution of our book across NCD levels at 10% claim frequency?" or "at what claim amount should a 65% NCD customer absorb the loss rather than claim?". These questions come up in pricing, reserving, and customer communications - and they are currently answered with spreadsheets that break when a colleague changes a tab name.
+Fleet motor is the clearest case. A 200-vehicle fleet has three years of claims history: 14 incidents, £320,000 in paid losses, £45,000 incurred but not yet settled. Market rating gives you the base. Experience rating answers what you actually want to know: how much should this account's own history move the price?
 
-On the commercial side, experience modification factors require getting the credibility weight and ballast right. Too little ballast and a single large loss blows up the mod; too much and you have lost all experience rating signal. This library makes the parameter choices explicit and auditable.
+The maths is not hard, but the choices are. What credibility weight? What ballast? How do you cap a single catastrophic loss so it does not blow up the mod? These decisions are regularly buried in an Excel cell with no audit trail. This library makes them explicit and auditable.
+
+Fleet also has no NCD system to fall back on — unlike personal motor, where a bad risk eventually self-selects up to a worse NCD level, fleet pricing is largely prospective. The experience mod factor is doing the full job of distinguishing good accounts from bad.
+
+Personal motor NCD is the secondary use case here. If your team is asking "what is the steady-state distribution of our book across NCD levels at 10% claim frequency?" or "at what claim amount should a 65% NCD customer absorb the loss rather than claim?", this library handles that too. But the core experience rating machinery was designed around commercial lines where NCD does not exist.
 
 ---
 
@@ -40,7 +44,52 @@ Requires Python 3.10+. Dependencies: `polars`, `numpy`, `scipy`.
 
 ## Quick start
 
-### NCD scale and stationary distribution
+### Fleet motor: experience modification factor
+
+Fleet is the primary use case. No NCD scale exists — the mod factor is the full adjustment.
+
+```python
+import polars as pl
+from experience_rating import ExperienceModFactor
+from experience_rating.experience_mod import CredibilityParams
+
+# Ballast of £8,000 means a fleet with £8k expected losses gets 50% credibility.
+# At £80k expected losses you are at ~91% credibility — effectively fully experience-rated.
+params = CredibilityParams(credibility_weight=0.65, ballast=8_000.0)
+emod = ExperienceModFactor(params)
+
+fleet_accounts = pl.DataFrame({
+    "risk_id": ["Alpha Logistics", "Beta Haulage", "Gamma Couriers"],
+    "expected_losses": [25_000.0, 80_000.0, 12_000.0],
+    "actual_losses":   [32_000.0, 65_000.0,  4_000.0],
+})
+
+result = emod.predict_batch(fleet_accounts, cap=2.0, floor=0.5)
+print(result)
+# Alpha: slightly above 1.0 (worse than expected, moderate size)
+# Beta: below 1.0 (better than expected, high credibility)
+# Gamma: well below 1.0 (much better than expected, low credibility damps it)
+```
+
+### Schedule rating for commercial risks
+
+Use this alongside the mod factor for discretionary underwriter adjustments.
+
+```python
+from experience_rating import ScheduleRating
+
+sr = ScheduleRating(max_total_debit=0.25, max_total_credit=0.25)
+sr.add_factor("Premises",      min_credit=-0.10, max_debit=0.10, description="Premises condition")
+sr.add_factor("Management",    min_credit=-0.07, max_debit=0.07, description="Management quality")
+sr.add_factor("Risk_Controls", min_credit=-0.08, max_debit=0.08, description="Risk controls")
+
+factor = sr.rate({"Premises": 0.05, "Management": -0.03, "Risk_Controls": 0.02})
+print(f"Schedule rating factor: {factor:.4f}")  # 1.0400
+```
+
+### Personal motor: NCD scale and stationary distribution
+
+NCD is the secondary use case — for personal lines teams who need to model the BM system analytically.
 
 ```python
 from experience_rating import BonusMalusScale, BonusMalusSimulator
@@ -60,7 +109,7 @@ epf = sim.expected_premium_factor()
 print(f"Average NCD at steady state: {(1 - epf) * 100:.1f}%")
 ```
 
-### Optimal claiming threshold
+### Personal motor: optimal claiming threshold
 
 ```python
 from experience_rating import ClaimThreshold
@@ -78,43 +127,27 @@ should = ct.should_claim(
 print("Claiming is rational" if should else "Better to pay out of pocket")
 ```
 
-### Experience modification factor
-
-```python
-import polars as pl
-from experience_rating import ExperienceModFactor
-from experience_rating.experience_mod import CredibilityParams
-
-params = CredibilityParams(credibility_weight=0.65, ballast=8_000.0)
-emod = ExperienceModFactor(params)
-
-portfolio = pl.DataFrame({
-    "risk_id": ["ABC Ltd", "XYZ Ltd"],
-    "expected_losses": [25_000.0, 80_000.0],
-    "actual_losses":   [32_000.0, 65_000.0],
-})
-
-result = emod.predict_batch(portfolio, cap=2.0, floor=0.5)
-print(result)
-```
-
-### Schedule rating
-
-```python
-from experience_rating import ScheduleRating
-
-sr = ScheduleRating(max_total_debit=0.25, max_total_credit=0.25)
-sr.add_factor("Premises",    min_credit=-0.10, max_debit=0.10, description="Premises condition")
-sr.add_factor("Management",  min_credit=-0.07, max_debit=0.07, description="Management quality")
-sr.add_factor("Risk_Controls", min_credit=-0.08, max_debit=0.08, description="Risk controls")
-
-factor = sr.rate({"Premises": 0.05, "Management": -0.03, "Risk_Controls": 0.02})
-print(f"Schedule rating factor: {factor:.4f}")  # 1.0400
-```
-
 ---
 
 ## API reference
+
+### `ExperienceModFactor`
+
+| Method | Description |
+|--------|-------------|
+| `from_exposure(actual, full_credibility, ballast, formula)` | Construct from exposure-based credibility |
+| `predict(expected_losses, actual_losses, cap, floor)` | Single-risk mod factor |
+| `predict_batch(df, cap, floor)` | Portfolio mod factors (Polars DataFrame) |
+| `sensitivity(expected_losses, actual_range, n_points)` | Mod vs actual loss curve |
+
+### `ScheduleRating`
+
+| Method | Description |
+|--------|-------------|
+| `add_factor(name, min_credit, max_debit, description)` | Register a rating factor (chainable) |
+| `rate(features)` | Multiplicative schedule factor for one risk |
+| `rate_batch(df)` | Schedule factors for a portfolio DataFrame |
+| `summary()` | Registered factors as a Polars DataFrame |
 
 ### `BonusMalusScale`
 
@@ -141,24 +174,6 @@ print(f"Schedule rating factor: {factor:.4f}")  # 1.0400
 | `should_claim(current_level, claim_amount, annual_premium, years_horizon)` | Boolean claiming decision |
 | `threshold_curve(current_level, annual_premium, max_horizon)` | Threshold vs horizon DataFrame |
 | `full_analysis(annual_premium, years_horizon)` | Thresholds for every level in the scale |
-
-### `ExperienceModFactor`
-
-| Method | Description |
-|--------|-------------|
-| `from_exposure(actual, full_credibility, ballast, formula)` | Construct from exposure-based credibility |
-| `predict(expected_losses, actual_losses, cap, floor)` | Single-risk mod factor |
-| `predict_batch(df, cap, floor)` | Portfolio mod factors (Polars DataFrame) |
-| `sensitivity(expected_losses, actual_range, n_points)` | Mod vs actual loss curve |
-
-### `ScheduleRating`
-
-| Method | Description |
-|--------|-------------|
-| `add_factor(name, min_credit, max_debit, description)` | Register a rating factor (chainable) |
-| `rate(features)` | Multiplicative schedule factor for one risk |
-| `rate_batch(df)` | Schedule factors for a portfolio DataFrame |
-| `summary()` | Registered factors as a Polars DataFrame |
 
 ---
 
@@ -188,11 +203,11 @@ scale = BonusMalusScale.from_dict(spec)
 
 ## Design notes
 
-**Why eigenvector for stationary distribution?** It is exact (no simulation noise) and fast. The simulation method exists as a sanity check - if the two disagree by more than a few percent, the transition matrix is probably not ergodic.
+**Why expose `ballast` directly rather than deriving it?** Because the choice of ballast is a deliberate actuarial decision that affects which risks get charged more and which get discounted. Hiding it inside a calibration function obscures a regulatory-facing choice. For fleet, this matters — a low ballast means small fleets are fully experience-rated, which can produce volatile pricing. Most underwriters choose a ballast that gives 50% credibility at around £5,000-£10,000 expected losses.
 
 **Why additive schedule rating (not multiplicative)?** UK commercial practice is additive: factors are debits/credits expressed as percentage adjustments summed together. The aggregate cap is where you control total swing. Multiplicative schedule rating is used in some US lines but is not standard in UK admitted business.
 
-**Why expose `ballast` directly rather than deriving it?** Because the choice of ballast is a deliberate actuarial decision that affects which risks get charged more and which get discounted. Hiding it inside a calibration function obscures a regulatory-facing choice.
+**Why eigenvector for stationary distribution?** It is exact (no simulation noise) and fast. The simulation method exists as a sanity check - if the two disagree by more than a few percent, the transition matrix is probably not ergodic.
 
 ---
 
@@ -213,9 +228,9 @@ Benchmarked against a **flat portfolio rate** (every policyholder charged the po
 
 The benchmark tests two components independently:
 
-**NCD / bonus-malus system:** 10,000 policyholders simulated through the ABI-standard UK motor NCD scale over 4 history years. The NCD level at year 5 is used as a premium predictor. This is a deliberately conservative test — the NCD level is a lossy encoding of history (level only, not raw claim counts), so some discrimination signal is discarded.
-
 **Experience modification factor:** Credibility-weighted mod formula applied to 4 years of aggregate loss experience per policyholder, with cap=2.0 and floor=0.50.
+
+**NCD / bonus-malus system:** 10,000 policyholders simulated through the ABI-standard UK motor NCD scale over 4 history years. The NCD level at year 5 is used as a premium predictor. This is a deliberately conservative test — the NCD level is a lossy encoding of history (level only, not raw claim counts), so some discrimination signal is discarded.
 
 | Method | Gini vs holdout claims | MSE vs DGP true frequency | Notes |
 |---|---|---|---|
