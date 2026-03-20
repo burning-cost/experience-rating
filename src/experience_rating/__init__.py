@@ -1,35 +1,14 @@
-"""
-experience-rating: NCD/bonus-malus systems, experience modification factors,
-and schedule rating for UK non-life insurance pricing.
+import warnings
 
-Modules:
-    bonus_malus: BonusMalusLevel, BonusMalusScale, BonusMalusSimulator,
-                 ClaimThreshold, TransitionRules
-    experience_mod: CredibilityParams, ExperienceModFactor, ScheduleRating
-"""
-
-from experience_rating.bonus_malus import (
-    BonusMalusLevel,
-    BonusMalusScale,
-    BonusMalusSimulator,
-    ClaimThreshold,
-    TransitionRules,
-)
-from experience_rating.experience_mod import (
-    CredibilityParams,
-    ExperienceModFactor,
-    ScheduleRating,
+warnings.warn(
+    "experience-rating is deprecated. Use insurance-credibility instead:\n"
+    "  pip install insurance-credibility\n"
+    "  from insurance_credibility.experience import StaticCredibilityModel, ClaimsHistory\n"
+    "  from insurance_credibility.experience import DynamicPoissonGammaModel, SurrogateModel\n"
+    "This package will be removed in a future release.",
+    DeprecationWarning,
+    stacklevel=2,
 )
 
-__all__ = [
-    "BonusMalusLevel",
-    "BonusMalusScale",
-    "BonusMalusSimulator",
-    "ClaimThreshold",
-    "CredibilityParams",
-    "ExperienceModFactor",
-    "ScheduleRating",
-    "TransitionRules",
-]
-
-__version__ = "0.1.3"
+# Re-export everything from the new location for backwards compatibility
+from insurance_credibility.experience import *  # noqa: F401,F403
