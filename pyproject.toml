@@ -35,6 +35,11 @@ dependencies = [
     "insurance-credibility>=0.1.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+]
+
 [project.urls]
 Repository = "https://github.com/burning-cost/experience-rating"
 
